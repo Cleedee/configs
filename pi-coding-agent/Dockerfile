@@ -10,6 +10,9 @@ RUN apt-get update && apt-get install -y \
 # Instala o Pi Agent globalmente via NPM
 RUN npm install -g @earendil-works/pi-coding-agent
 
+# Instala as extensões do Pi
+RUN npm install -g pi-mcp-adapter pi-web-access
+
 # Define o diretório onde você vai mapear o código do seu projeto
 WORKDIR /workspace
 
