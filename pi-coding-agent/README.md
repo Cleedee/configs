@@ -3,14 +3,8 @@
 Com um único comando você baixa o script de configuração e já executa:
 
 ```
-curl -fsSL https://raw.githubusercontent.com/claudiomelo/configs/main/pi-coding-agent/setup-pi-agent.sh | bash
+curl -fsSL -o setup-pi-agent.sh https://raw.githubusercontent.com/Cleedee/configs/main/pi-coding-agent/setup-pi-agent.sh && chmod +x setup-pi-agent.sh && ./setup-pi-agent.sh
 ```
-
-> **Nota:** a URL acima é um exemplo. Substitua pelo seu repositório correto ou baixe o arquivo diretamente deste repositório:
->
-> ```
-> curl -fsSL -o setup-pi-agent.sh https://<seu-repo>/raw/main/pi-coding-agent/setup-pi-agent.sh && chmod +x setup-pi-agent.sh && ./setup-pi-agent.sh
-> ```
 
 O script cuida de tudo automaticamente: constrói a imagem Docker, cria o arquivo de variáveis de ambiente e adiciona o alias `pi-docker` ao seu `~/.bashrc`.
 
