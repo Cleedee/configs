@@ -5,6 +5,16 @@ RUN apt-get update && apt-get install -y \
     git \
     curl \
     vim \
+    software-properties-common \
+    && rm -rf /var/lib/apt/lists/*
+
+# Instala Python 3.12 via deadsnakes PPA
+RUN apt-get update && apt-get install -y software-properties-common \
+    && add-apt-repository -y ppa:deadsnakes/ppa \
+    && apt-get update \
+    && apt-get install -y python3.12 python3.12-venv python3.12-distutils \
+    && ln -sf /usr/bin/python3.12 /usr/bin/python3 \
+    && ln -sf /usr/bin/python3.12 /usr/bin/python \
     && rm -rf /var/lib/apt/lists/*
 
 # Instala o Pi Agent globalmente via NPM
