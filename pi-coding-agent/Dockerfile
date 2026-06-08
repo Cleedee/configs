@@ -1,19 +1,23 @@
-FROM node:23-slim
+FROM ubuntu:24.04
 
 # Instala dependências essenciais de terminal que o Pi usa para o comando 'bash'
 RUN apt-get update && apt-get install -y \
     git \
     curl \
     vim \
-    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Instala Python 3.12 via uv
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
-    && export PATH="$HOME/.local/bin:$PATH" \
-    && uv python install 3.12 \
-    && ln -sf ~/.local/bin/python3.12 /usr/bin/python3 \
-    && ln -sf ~/.local/bin/python3.12 /usr/bin/python
+# Instala Node.js 23 via NodeSource
+RUN curl -fsSL https://deb.nodesource.com/setup_23.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+# Python 3.12 já está nos repositórios oficiais do Ubuntu 24.04
+RUN apt-get update && apt-get install -y \
+    python3.12 python3.12-venv python3-pip \
+    && ln -sf /usr/bin/python3.12 /usr/bin/python3 \
+    && ln -sf /usr/bin/python3.12 /usr/bin/python \
+    && rm -rf /var/lib/apt/lists/*
 
 # Instala o Pi Agent globalmente via NPM
 RUN npm install -g @earendil-works/pi-coding-agent
