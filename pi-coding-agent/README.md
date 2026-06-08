@@ -2,11 +2,19 @@
 
 Com um único comando você baixa o script de configuração e já executa:
 
-```
+### Linux / macOS (bash)
+
+```bash
 curl -fsSL -o setup-pi-agent.sh https://raw.githubusercontent.com/Cleedee/configs/main/pi-coding-agent/setup-pi-agent.sh && chmod +x setup-pi-agent.sh && ./setup-pi-agent.sh
 ```
 
-O script cuida de tudo automaticamente: constrói a imagem Docker, cria o arquivo de variáveis de ambiente e adiciona o alias `pi-docker` ao seu `~/.bashrc`.
+### Windows (PowerShell)
+
+```powershell
+powershell -c "iwr -UseBasicParsing -Uri 'https://raw.githubusercontent.com/Cleedee/configs/main/pi-coding-agent/setup-pi-agent.ps1' -OutFile setup-pi-agent.ps1; .\setup-pi-agent.ps1"
+```
+
+O script cuida de tudo automaticamente: constrói a imagem Docker, cria o arquivo de variáveis de ambiente e adiciona o alias `pi-docker` ao seu profile do shell.
 
 ---
 
