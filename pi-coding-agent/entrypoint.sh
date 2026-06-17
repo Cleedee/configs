@@ -3,42 +3,52 @@ set -e
 
 # ── Headroom: proxy de compressão de contexto ────────────
 
-# Configura upstream para OpenRouter via variáveis de ambiente
-# (mecanismo oficial do proxy para /v1/chat/completions)
-if [ -n "$OPENROUTER_API_KEY" ]; then
-  echo "[headroom] OPENROUTER_API_KEY detectada — upstream: OpenRouter"
-  export OPENAI_API_KEY="$OPENROUTER_API_KEY"
-  export OPENAI_TARGET_API_URL="https://openrouter.ai/api/v1"
-elif [ -n "$OPENROUTER_KEY" ]; then
-  echo "[headroom] OPENROUTER_KEY -> OPENROUTER_API_KEY"
-  export OPENROUTER_API_KEY="$OPENROUTER_KEY"
-  export OPENAI_API_KEY="$OPENROUTER_KEY"
-  export OPENAI_TARGET_API_URL="https://openrouter.ai/api/v1"
+# Só faz sentido com OpenRouter (único provider com chave configurada)
+if [ -z "$OPENROUTER_API_KEY" ]; then
+  if [ -n "$OPENROUTER_KEY" ]; then
+    echo "[headroom] OPENROUTER_KEY -> OPENROUTER_API_KEY"
+    export OPENROUTER_API_KEY="$OPENROUTER_KEY"
+  else
+    echo "[headroom] AVISO: OPENROUTER_API_KEY não definida — headroom não será usado"
+  fi
 fi
 
-echo "[headroom] OPENAI_TARGET_API_URL=$OPENAI_TARGET_API_URL"
-echo "[headroom] OPENAI_API_KEY=${OPENAI_API_KEY:0:15}..."
+if [ -n "$OPENROUTER_API_KEY" ]; then
+  echo "[headroom] OPENROUTER_API_KEY detectada"
+  export OPENROUTER_API_KEY="$OPENROUTER_API_KEY"
+  export OPENAI_TARGET_API_URL="https://openrouter.ai/api/v1"
 
-echo "[headroom] Iniciando proxy na porta 8787..."
-headroom proxy --host 0.0.0.0 --port 8787 &
-HEADROOM_PID=$!
-
-echo "[headroom] Aguardando proxy ficar pronto..."
-for i in $(seq 1 15); do
-  if curl -sf http://localhost:8787/health > /dev/null 2>&1; then
-    echo "[headroom] Proxy rodando em http://localhost:8787"
-    break
+  # Headroom exige ANTHROPIC_API_KEY mesmo com backend openrouter
+  if [ -z "$ANTHROPIC_API_KEY" ]; then
+    export ANTHROPIC_API_KEY="sk-ant-dummy"
+    echo "[headroom] ANTHROPIC_API_KEY=sk-ant-dummy (placeholder)"
   fi
-  if [ "$i" -eq 15 ]; then
-    echo "[headroom] Aviso: proxy não respondeu, continuando mesmo assim..."
-  fi
-  sleep 1
-done
 
-# ── Configura Pi Agent para rotear chamadas via proxy ────
-mkdir -p /root/.pi/agent
+  echo "[headroom] OPENAI_TARGET_API_URL=$OPENAI_TARGET_API_URL"
 
-cat > /root/.pi/agent/models.json << 'CONF'
+  echo "[headroom] Iniciando proxy na porta 8787 (backend: openrouter)..."
+  headroom proxy \
+    --host 0.0.0.0 --port 8787 \
+    --backend openrouter \
+    --openai-api-url "https://openrouter.ai/api/v1" &
+  HEADROOM_PID=$!
+
+  echo "[headroom] Aguardando proxy ficar pronto..."
+  for i in $(seq 1 15); do
+    if curl -sf http://localhost:8787/health > /dev/null 2>&1; then
+      echo "[headroom] Proxy rodando em http://localhost:8787"
+      break
+    fi
+    if [ "$i" -eq 15 ]; then
+      echo "[headroom] Aviso: proxy não respondeu, continuando mesmo assim..."
+    fi
+    sleep 1
+  done
+
+  # ── Configura Pi Agent para rotear chamadas via proxy ────
+  mkdir -p /root/.pi/agent
+
+  cat > /root/.pi/agent/models.json << CONF
 {
   "providers": {
     "openrouter": {
@@ -60,9 +70,21 @@ cat > /root/.pi/agent/models.json << 'CONF'
 }
 CONF
 
-echo "[headroom] Provedores redirecionados para o proxy com apiKey explícita"
-echo "[headroom] Use 'pi --provider openrouter' ou 'pi --provider opencode' como antes"
-echo ""
+  echo "[headroom] Provedores redirecionados para o proxy com apiKey explícita"
+  echo "[headroom] Modelos disponíveis via Ctrl+P: owl-alpha, big-picke, deepseek-v4-flash-free"
+  echo ""
+else
+  echo "[headroom] Proxy desabilitado — seguindo direto para o Pi Agent"
+fi
 
 # ── Executa Pi Agent com todos os argumentos recebidos ───
-exec pi "$@"
+# Remove leading "pi" se o usuário passou (ex: "docker run ... pi --provider")
+ARGS=()
+for arg in "$@"; do
+  if [ "$arg" != "pi" ] || [ ${#ARGS[@]} -gt 0 ]; then
+    ARGS+=("$arg")
+  fi
+done
+
+# --models antes de ARGS permite override: docker run ... --models "outros"
+exec pi --models "owl-alpha,big-picke,deepseek-v4-flash-free" "${ARGS[@]}"
