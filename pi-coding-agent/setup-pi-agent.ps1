@@ -31,8 +31,9 @@ if (Test-Path $ENV_FILE) {
 else {
     Write-Info "Criando $ENV_FILE para suas chaves de API..."
     @"
-OPENROUTER_API_KEY=sk-or-...
-OPENCODE_API_KEY=sk-oc-...
+OPENAI_API_KEY=sk-proj-...
+ANTHROPIC_API_KEY=sk-ant-...
+DEEPSEEK_API_KEY=sk-...
 "@ | Set-Content -Path $ENV_FILE -Encoding ASCII
     Write-Ok "$ENV_FILE criado. EDITE com suas chaves reais!"
 }
@@ -97,7 +98,6 @@ Write-Host ""
 Write-Host "  O que o alias faz:"                              -ForegroundColor Yellow
 Write-Host "  • Abre o Pi interativamente no diretório atual"
 Write-Host "  • Injeta suas chaves de API via ~\.pi-env"
-Write-Host "  • Headroom (auto-iniciado): comprime contexto 60-95%"
 Write-Host "  • Preserva config/histórico no volume $VOLUME_NAME"
 Write-Host "  • Remove o contêiner ao sair (exit)"
 Write-Host ""
