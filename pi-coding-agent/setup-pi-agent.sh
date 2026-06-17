@@ -40,9 +40,8 @@ if [[ -f "${ENV_FILE}" ]]; then
 else
     info "Criando ~/.pi-env para suas chaves de API..."
     cat > "${ENV_FILE}" <<'EOF'
-OPENAI_API_KEY=sk-proj-...
-ANTHROPIC_API_KEY=sk-ant-...
-DEEPSEEK_API_KEY=sk-...
+OPENROUTER_API_KEY=sk-or-...
+OPENCODE_API_KEY=sk-oc-...
 EOF
     success "~/.pi-env criado. EDITE com suas chaves reais!"
 fi
@@ -98,6 +97,7 @@ echo ""
 echo -e "  ${YELLOW}O que o alias faz:${NC}"
 echo -e "  • Abre o Pi interativamente no diretório atual"
 echo -e "  • Injeta suas chaves de API via ~/.pi-env"
+echo -e "  • Headroom (auto-iniciado): comprime contexto 60-95%"
 echo -e "  • Preserva config/histórico no volume pi_config"
 echo -e "  • Remove o contêiner ao sair (exit)"
 echo ""
