@@ -1,4 +1,4 @@
-FROM ubuntu:24.04
+FROM ubuntu:25.10
 
 # Instala dependências essenciais de terminal que o Pi usa para o comando 'bash'
 RUN apt-get update && apt-get install -y \
@@ -7,8 +7,8 @@ RUN apt-get update && apt-get install -y \
     vim \
     && rm -rf /var/lib/apt/lists/*
 
-# Instala Node.js 23 via NodeSource
-RUN curl -fsSL https://deb.nodesource.com/setup_23.x | bash - \
+# Instala Node.js 24 via NodeSource
+RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
@@ -16,7 +16,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_23.x | bash - \
 RUN npm install -g @earendil-works/pi-coding-agent
 
 # Instala as extensões do Pi
-RUN npm install -g pi-mcp-adapter pi-web-access
+RUN npm install -g pi-mcp-adapter pi-web-access npm:@sentiolabs/pi-frontend-design
 
 # Define o diretório onde você vai mapear o código do seu projeto
 WORKDIR /workspace

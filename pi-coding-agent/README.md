@@ -21,7 +21,7 @@ O script cuida de tudo automaticamente: constrói a imagem Docker, cria o arquiv
 ## Passo 0. Dockerfile
 
 ```
-FROM node:22-slim
+FROM ubuntu:24.04
 
 # Instala dependências essenciais de terminal que o Pi usa para o comando 'bash'
 RUN apt-get update && apt-get install -y \
@@ -30,8 +30,16 @@ RUN apt-get update && apt-get install -y \
     vim \
     && rm -rf /var/lib/apt/lists/*
 
+# Instala Node.js 23 via NodeSource
+RUN curl -fsSL https://deb.nodesource.com/setup_23.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
 # Instala o Pi Agent globalmente via NPM
 RUN npm install -g @earendil-works/pi-coding-agent
+
+# Instala as extensões do Pi
+RUN npm install -g pi-mcp-adapter pi-web-access
 
 # Define o diretório onde você vai mapear o código do seu projeto
 WORKDIR /workspace
