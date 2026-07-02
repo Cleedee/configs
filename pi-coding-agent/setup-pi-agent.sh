@@ -53,7 +53,7 @@ echo -e "  ${YELLOW}nano ~/.pi-env${NC}"
 echo ""
 
 # ── Passo 3: Criar alias no .bashrc ──────────────────────
-ALIAS_CMD="alias pi-docker='docker run -it --rm -v \"\$(pwd)\":/workspace -v pi_config:/root/.config/pi -v ~/.gitconfig:/root/.gitconfig:ro --env-file ~/.pi-env ${IMAGE_NAME}'"
+ALIAS_CMD="alias pi-docker='docker run -it --rm --user \"\$(id -u):\$(id -g)\" -v \"\$(pwd)\":/workspace -v pi_config:/tmp/.config/pi -v ~/.gitconfig:/tmp/.gitconfig:ro -v ~/.cache:/tmp/.cache --env-file ~/.pi-env -e HOME=/tmp -e PIP_CACHE_DIR=/tmp/.cache/pip ${IMAGE_NAME}'"
 BASHRC="${HOME}/.bashrc"
 
 if grep -qF "pi-docker" "${BASHRC}" 2>/dev/null; then

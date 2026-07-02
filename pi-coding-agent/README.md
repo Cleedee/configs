@@ -21,7 +21,7 @@ O script cuida de tudo automaticamente: constrói a imagem Docker, cria o arquiv
 ## Passo 0. Dockerfile
 
 ```
-FROM ubuntu:24.04
+FROM ubuntu:25.10
 
 # Instala dependências essenciais de terminal que o Pi usa para o comando 'bash'
 RUN apt-get update && apt-get install -y \
@@ -30,8 +30,8 @@ RUN apt-get update && apt-get install -y \
     vim \
     && rm -rf /var/lib/apt/lists/*
 
-# Instala Node.js 23 via NodeSource
-RUN curl -fsSL https://deb.nodesource.com/setup_23.x | bash - \
+# Instala Node.js 24 via NodeSource
+RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
@@ -39,7 +39,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_23.x | bash - \
 RUN npm install -g @earendil-works/pi-coding-agent
 
 # Instala as extensões do Pi
-RUN npm install -g pi-mcp-adapter pi-web-access
+RUN npm install -g pi-mcp-adapter pi-web-access npm:@sentiolabs/pi-frontend-design
 
 # Define o diretório onde você vai mapear o código do seu projeto
 WORKDIR /workspace
@@ -69,7 +69,7 @@ DEEPSEEK_API_KEY=sk-ant-...
 vim ~/.bashrc
 
 ```
-alias pi-docker='docker run -it --rm -v "$(pwd)":/workspace -v pi_config:/root/.config/pi -v ~/.gitconfig:/root/.gitconfig:ro --env-file ~/.pi-env meu-pi-agent'
+alias pi-docker='docker run -it --rm --user "$(id -u):$(id -g)" -v "$(pwd)":/workspace -v pi_config:/tmp/.config/pi -v ~/.gitconfig:/tmp/.gitconfig:ro -v ~/.cache:/tmp/.cache --env-file ~/.pi-env -e HOME=/tmp -e PIP_CACHE_DIR=/tmp/.cache/pip meu-pi-agent'
 ```
 
 ## Como usar no dia a dia?
@@ -87,6 +87,9 @@ pi-docker
 ## O que esse comando mágico faz por baixo dos panos?
 
 - -it --rm: Abre o Pi de forma interativa no terminal e destrói o contêiner temporário assim que você digita exit, sem deixar resíduos.
+- --user "$(id -u):$(id -g)": Faz o container rodar com o mesmo UID/GID do seu usuário host. Isso evita que arquivos criados pelo container (ex: `.venv/`, `node_modules/`) fiquem com dono `root` e você perca permissão de editá-los depois.
 - -v "$(pwd)":/workspace: Pega o caminho da pasta atual onde você está no seu computador (pwd) e joga para dentro do ambiente de trabalho do Pi Agent.
 - --env-file ~/.pi-env: Injeta as chaves de API que você salvou de forma centralizada.
-- -v pi_config:/root/.config/pi: Garante que, mesmo mudando de projeto, o Pi Agent ainda lembre das suas preferências, histórico global e configurações internas.
+- -v pi_config:/tmp/.config/pi: Garante que, mesmo mudando de projeto, o Pi Agent ainda lembre das suas preferências, histórico global e configurações internas.
+- -v ~/.cache:/tmp/.cache + -e PIP_CACHE_DIR=/tmp/.cache/pip: Compartilha o cache do pip entre host e container, evitando baixar pacotes repetidamente.
+- -e HOME=/tmp: Define um diretório home gravável para ferramentas como pip e git (já que o `/root` original não seria gravável com `--user`).
