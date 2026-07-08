@@ -53,7 +53,7 @@ echo -e "  ${YELLOW}nano ~/.pi-env${NC}"
 echo ""
 
 # ── Passo 3: Criar alias no .bashrc ──────────────────────
-ALIAS_CMD="alias pi-docker='docker run -it --rm -v \"\$(pwd)\":/workspace -v pi_config:/root/.config/pi -v ~/.gitconfig:/root/.gitconfig:ro --env-file ~/.pi-env ${IMAGE_NAME}'"
+ALIAS_CMD="alias pi-docker='docker run -it --rm -v \"\$(pwd)\":/workspace -v pi_config:/root/.pi/agent -v ~/.gitconfig:/root/.gitconfig:ro --env-file ~/.pi-env ${IMAGE_NAME}'"
 BASHRC="${HOME}/.bashrc"
 
 if grep -qF "pi-docker" "${BASHRC}" 2>/dev/null; then
@@ -70,13 +70,28 @@ else
     success "Alias 'pi-docker' adicionado ao ~/.bashrc."
 fi
 
-# ── Passo 4: (Opcional) Criar o volume de config ─────────
+# ── Passo 4: Criar o volume de config e semear settings.json ─
 info "Verificando volume Docker 'pi_config'..."
 if docker volume inspect pi_config &>/dev/null 2>&1; then
     success "Volume 'pi_config' já existe."
 else
     docker volume create pi_config &>/dev/null
     success "Volume 'pi_config' criado."
+fi
+
+# Se o volume estiver vazio, copia o settings.json padrão da imagem
+info "Verificando se o volume precisa ser semeado com settings.json..."
+if ! docker run --rm -v pi_config:/data alpine ls /data/settings.json &>/dev/null 2>&1; then
+    docker run --rm \
+        -v pi_config:/data \
+        "${IMAGE_NAME}" \
+        sh -c "cp /root/.pi/agent/settings.json /data/settings.json" 2>/dev/null || \
+    docker run --rm \
+        -v pi_config:/data \
+        alpine sh -c "echo '{\"packages\":[\"npm:pi-mcp-adapter\",\"npm:pi-web-access\"]}' > /data/settings.json"
+    success "settings.json padrão copiado para o volume."
+else
+    info "settings.json já existe no volume. Mantido."
 fi
 
 # ── Resumo ───────────────────────────────────────────────
@@ -98,6 +113,6 @@ echo ""
 echo -e "  ${YELLOW}O que o alias faz:${NC}"
 echo -e "  • Abre o Pi interativamente no diretório atual"
 echo -e "  • Injeta suas chaves de API via ~/.pi-env"
-echo -e "  • Preserva config/histórico no volume pi_config"
+echo -e "  • Preserva config/histórico no volume pi_config (montado em /root/.pi/agent)"
 echo -e "  • Remove o contêiner ao sair (exit)"
 echo ""
