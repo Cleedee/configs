@@ -15,6 +15,9 @@ RUN curl -fsSL https://deb.nodesource.com/setup_23.x | bash - \
 # Instala uv (gerenciador de pacotes Python)
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
+# Adiciona uv ao PATH (o instalador coloca em ~/.local/bin)
+ENV PATH="/root/.local/bin:${PATH}"
+
 # Instala o Pi Agent globalmente via NPM
 RUN npm install -g @earendil-works/pi-coding-agent
 
