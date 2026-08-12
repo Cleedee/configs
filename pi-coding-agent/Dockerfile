@@ -28,7 +28,8 @@ RUN npm install -g pi-mcp-adapter pi-web-access
 # (inclui as extensões instaladas acima para que sejam ativadas)
 RUN mkdir -p /root/.pi/agent && \
     echo '{"packages":["npm:pi-mcp-adapter","npm:pi-web-access"]}' \
-    > /root/.pi/agent/settings.json
+    > /root/.pi/agent/settings.json && \
+    chmod -R a+rwX /root/.pi
 
 # Define o diretório onde você vai mapear o código do seu projeto
 WORKDIR /workspace

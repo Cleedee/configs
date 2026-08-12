@@ -44,7 +44,7 @@ Write-Host "  notepad $ENV_FILE" -ForegroundColor Yellow
 Write-Host ""
 
 # ── Passo 3: Criar alias no PowerShell profile ──────────
-$AliasCmd = "function pi-docker { docker run -it --rm -v `"`$(Get-Location)`":/workspace -v ${VOLUME_NAME}:/root/.config/pi -v `"$HOME\.gitconfig`":/root/.gitconfig:ro --env-file `"$ENV_FILE`" $IMAGE_NAME }"
+$AliasCmd = "function pi-docker { docker run -it --rm -v `"`$(Get-Location)`":/workspace -v ${VOLUME_NAME}:/root/.pi/agent -v `"$HOME\.gitconfig`":/root/.gitconfig:ro --env-file `"$ENV_FILE`" $IMAGE_NAME }"
 
 if (Test-Path $PROFILE_PATH) {
     $ProfileContent = Get-Content $PROFILE_PATH -Raw -ErrorAction SilentlyContinue
@@ -78,6 +78,25 @@ else {
     docker volume create $VOLUME_NAME 2>$null
     Write-Ok "Volume '$VOLUME_NAME' criado."
 }
+
+# ── Passo 5: Semear settings.json no volume (se vazio) ──
+Write-Info "Verificando se o volume precisa ser semeado com settings.json..."
+docker run --rm -v ${VOLUME_NAME}:/data alpine ls /data/settings.json 2>$null | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    docker run --rm -v ${VOLUME_NAME}:/data --entrypoint sh $IMAGE_NAME -c "cp /root/.pi/agent/settings.json /data/settings.json" 2>$null | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        docker run --rm -v ${VOLUME_NAME}:/data alpine sh -c "echo '{\"packages\":[\"npm:pi-mcp-adapter\",\"npm:pi-web-access\"]}' > /data/settings.json"
+    }
+    Write-Ok "settings.json padrão copiado para o volume."
+}
+else {
+    Write-Info "settings.json já existe no volume. Mantido."
+}
+
+# Garante que o pi.dev (qualquer UID) consiga ler/escrever em /root/.pi
+Write-Info "Ajustando permissões do volume (evita 'permission denied' em /root/.pi)..."
+docker run --rm -v ${VOLUME_NAME}:/data alpine chmod -R a+rwX /data | Out-Null
+Write-Ok "Permissões do volume ajustadas."
 
 # ── Resumo ───────────────────────────────────────────────
 Write-Host ""

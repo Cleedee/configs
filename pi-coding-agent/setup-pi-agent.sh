@@ -53,7 +53,7 @@ echo -e "  ${YELLOW}nano ~/.pi-env${NC}"
 echo ""
 
 # ── Passo 3: Criar alias no .bashrc ──────────────────────
-ALIAS_CMD="alias pi-docker='docker run -it --rm -v \"\$(pwd)\":/workspace -v pi_config:/root/.pi/agent -v ~/.gitconfig:/root/.gitconfig:ro --env-file ~/.pi-env ${IMAGE_NAME}'"
+ALIAS_CMD="alias pi-docker='docker run -it --rm -v \"\$(pwd)\":/workspace -v pi_config:/root/.pi/agent:z -v ~/.gitconfig:/root/.gitconfig:ro --env-file ~/.pi-env ${IMAGE_NAME}'"
 BASHRC="${HOME}/.bashrc"
 
 if grep -qF "pi-docker" "${BASHRC}" 2>/dev/null; then
@@ -80,12 +80,14 @@ else
 fi
 
 # Se o volume estiver vazio, copia o settings.json padrão da imagem
+# (--entrypoint sh anula o ENTRYPOINT ["pi"] para o cp rodar de fato)
 info "Verificando se o volume precisa ser semeado com settings.json..."
 if ! docker run --rm -v pi_config:/data alpine ls /data/settings.json &>/dev/null 2>&1; then
     docker run --rm \
         -v pi_config:/data \
+        --entrypoint sh \
         "${IMAGE_NAME}" \
-        sh -c "cp /root/.pi/agent/settings.json /data/settings.json" 2>/dev/null || \
+        -c "cp /root/.pi/agent/settings.json /data/settings.json" 2>/dev/null || \
     docker run --rm \
         -v pi_config:/data \
         alpine sh -c "echo '{\"packages\":[\"npm:pi-mcp-adapter\",\"npm:pi-web-access\"]}' > /data/settings.json"
@@ -93,6 +95,12 @@ if ! docker run --rm -v pi_config:/data alpine ls /data/settings.json &>/dev/nul
 else
     info "settings.json já existe no volume. Mantido."
 fi
+
+# Garante que o pi.dev (qualquer UID/SELinux) consiga ler/escrever em /root/.pi
+# Isso evita o erro "EACCES: permission denied" ao acessar /root/.pi
+info "Ajustando permissões do volume (evita 'permission denied' em /root/.pi)..."
+docker run --rm -v pi_config:/data alpine chmod -R a+rwX /data
+success "Permissões do volume ajustadas."
 
 # ── Resumo ───────────────────────────────────────────────
 echo ""

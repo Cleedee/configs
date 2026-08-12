@@ -57,7 +57,7 @@ vim ~/.bashrc
 ```bash
 alias pi-docker='docker run -it --rm \
   -v "$(pwd)":/workspace \
-  -v pi_config:/root/.pi/agent \
+  -v pi_config:/root/.pi/agent:z \
   -v ~/.gitconfig:/root/.gitconfig:ro \
   --env-file ~/.pi-env \
   meu-pi-agent'
@@ -80,7 +80,19 @@ pi-docker
 - `-it --rm`: Abre o Pi de forma interativa no terminal e destrói o contêiner temporário assim que você digita exit, sem deixar resíduos.
 - `-v "$(pwd)":/workspace`: Pega o caminho da pasta atual onde você está e joga para dentro do ambiente de trabalho do Pi Agent.
 - `--env-file ~/.pi-env`: Injeta as chaves de API que você salvou de forma centralizada.
-- `-v pi_config:/root/.pi/agent`: Persiste configurações, histórico e preferências do Pi entre sessões, independente do projeto. Na primeira execução, o volume é semeado automaticamente com o `settings.json` padrão (contendo as extensões ativadas).
+- `-v pi_config:/root/.pi/agent:z`: Persiste configurações, histórico e preferências do Pi entre sessões, independente do projeto. Na primeira execução, o volume é semeado automaticamente com o `settings.json` padrão (contendo as extensões ativadas). O sufixo `:z` relabela o volume para hosts com SELinux (Fedora/RHEL) e é inofensivo nos demais.
+
+## Solução de problemas
+
+### EACCES / "permission denied" ao acessar /root/.pi
+
+O volume `pi_config` pode ficar com dono/permissões incompatíveis com o usuário com que o pi.dev roda dentro do container (comum em Docker rootless, Podman ou hosts com SELinux). Corrija as permissões do volume existente:
+
+```bash
+docker run --rm -v pi_config:/data:z alpine chmod -R a+rwX /data
+```
+
+Em hosts com SELinux, garanta também que o mount use o sufixo `:z` no alias `pi-docker` (já incluído acima). O `setup-pi-agent.sh` faz o ajuste de permissões automaticamente; o comando acima serve para volumes já criados antes da atualização.
 
 ## Estrutura do projeto
 
