@@ -44,7 +44,7 @@ Write-Host "  notepad $ENV_FILE" -ForegroundColor Yellow
 Write-Host ""
 
 # ── Passo 3: Criar alias no PowerShell profile ──────────
-$AliasCmd = "function pi-docker { docker run -it --rm -v `"`$(Get-Location)`":/workspace -v ${VOLUME_NAME}:/root/.pi/agent -v `"$HOME\.gitconfig`":/root/.gitconfig:ro --env-file `"$ENV_FILE`" $IMAGE_NAME }"
+$AliasCmd = "function pi-docker { docker run -it --rm --ipc=host -v `"`$(Get-Location)`":/workspace -v ${VOLUME_NAME}:/root/.pi/agent -v `"$HOME\.gitconfig`":/root/.gitconfig:ro --env-file `"$ENV_FILE`" $IMAGE_NAME }"
 
 if (Test-Path $PROFILE_PATH) {
     $ProfileContent = Get-Content $PROFILE_PATH -Raw -ErrorAction SilentlyContinue

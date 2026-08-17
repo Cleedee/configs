@@ -56,6 +56,7 @@ vim ~/.bashrc
 
 ```bash
 alias pi-docker='docker run -it --rm \
+  --ipc=host \
   -v "$(pwd)":/workspace \
   -v pi_config:/root/.pi/agent:z \
   -v ~/.gitconfig:/root/.gitconfig:ro \
