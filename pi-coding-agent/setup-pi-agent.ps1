@@ -44,7 +44,7 @@ Write-Host "  notepad $ENV_FILE" -ForegroundColor Yellow
 Write-Host ""
 
 # ── Passo 3: Criar alias no PowerShell profile ──────────
-$AliasCmd = "function pi-docker { docker run -it --rm -v `"`$(Get-Location)`":/workspace -v ${VOLUME_NAME}:/root/.config/pi -v `"$HOME\.gitconfig`":/root/.gitconfig:ro --env-file `"$ENV_FILE`" $IMAGE_NAME }"
+$AliasCmd = "function pi-docker { docker run -it --rm -v `"`$(Get-Location)`":/workspace -v ${VOLUME_NAME}:/tmp/.config/pi -v `"$HOME\.gitconfig`":/root/.gitconfig:ro --env-file `"$ENV_FILE`" $IMAGE_NAME }"
 
 if (Test-Path $PROFILE_PATH) {
     $ProfileContent = Get-Content $PROFILE_PATH -Raw -ErrorAction SilentlyContinue
@@ -69,7 +69,7 @@ $AliasCmd
     Write-Warn "Recarregue o profile com: . `$PROFILE"
 }
 
-# ── Passo 4: (Opcional) Criar o volume de config ─────────
+# ── Passo 4: Criar o volume, semear settings.json e ajustar permissões ─
 Write-Info "Verificando volume Docker '$VOLUME_NAME'..."
 if (docker volume inspect $VOLUME_NAME 2>$null | Out-String | Select-String -SimpleMatch "Name") {
     Write-Ok "Volume '$VOLUME_NAME' já existe."
@@ -78,6 +78,18 @@ else {
     docker volume create $VOLUME_NAME 2>$null
     Write-Ok "Volume '$VOLUME_NAME' criado."
 }
+
+# Semeia o volume com o settings.json padrão (declara as extensões do Pi)
+# apenas se ainda não existir. O helper roda como root (a imagem não define USER)
+# e monta o volume no mesmo caminho do agent dir (PI_CODING_AGENT_DIR).
+Write-Info "Semeando settings.json padrão no volume (se necessário)..."
+docker run --rm -v "${VOLUME_NAME}:/tmp/.config/pi" --entrypoint sh $IMAGE_NAME -c "[ -f /tmp/.config/pi/settings.json ] || cp /opt/pi-defaults/settings.json /tmp/.config/pi/settings.json" 2>$null
+if ($?) { Write-Ok "settings.json padrão garantido no volume." } else { Write-Warn "Não foi possível semear o settings.json." }
+
+# Garante que o container consiga ler/escrever o volume, evitando EACCES no agent dir.
+Write-Info "Ajustando permissões do volume..."
+docker run --rm -v "${VOLUME_NAME}:/tmp/.config/pi" --entrypoint sh $IMAGE_NAME -c "chmod -R a+rwX /tmp/.config/pi" 2>$null
+Write-Ok "Permissões do volume ajustadas."
 
 # ── Resumo ───────────────────────────────────────────────
 Write-Host ""
@@ -98,6 +110,8 @@ Write-Host ""
 Write-Host "  O que o alias faz:"                              -ForegroundColor Yellow
 Write-Host "  • Abre o Pi interativamente no diretório atual"
 Write-Host "  • Injeta suas chaves de API via ~\.pi-env"
-Write-Host "  • Preserva config/histórico no volume $VOLUME_NAME"
+Write-Host "  • Preserva config/histórico no volume $VOLUME_NAME (agent dir /tmp/.config/pi)"
+Write-Host "  • Ativa as extensões do Pi via settings.json"
+Write-Host "  • Python 3.12 gerenciado pelo uv"
 Write-Host "  • Remove o contêiner ao sair (exit)"
 Write-Host ""

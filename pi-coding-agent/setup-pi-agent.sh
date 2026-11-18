@@ -53,7 +53,7 @@ echo -e "  ${YELLOW}nano ~/.pi-env${NC}"
 echo ""
 
 # ── Passo 3: Criar alias no .bashrc ──────────────────────
-ALIAS_CMD="alias pi-docker='docker run -it --rm --user \"\$(id -u):\$(id -g)\" -v \"\$(pwd)\":/workspace -v pi_config:/tmp/.config/pi -v ~/.gitconfig:/tmp/.gitconfig:ro -v ~/.cache:/tmp/.cache --env-file ~/.pi-env -e HOME=/tmp -e PIP_CACHE_DIR=/tmp/.cache/pip ${IMAGE_NAME}'"
+ALIAS_CMD="alias pi-docker='docker run -it --rm --user \"\$(id -u):\$(id -g)\" -v \"\$(pwd)\":/workspace -v pi_config:/tmp/.config/pi -v ~/.gitconfig:/tmp/.gitconfig:ro -v ~/.cache:/tmp/.cache --env-file ~/.pi-env -e HOME=/tmp -e PIP_CACHE_DIR=/tmp/.cache/pip -e UV_CACHE_DIR=/tmp/.cache/uv ${IMAGE_NAME}'"
 BASHRC="${HOME}/.bashrc"
 
 if grep -qF "pi-docker" "${BASHRC}" 2>/dev/null; then
@@ -70,7 +70,7 @@ else
     success "Alias 'pi-docker' adicionado ao ~/.bashrc."
 fi
 
-# ── Passo 4: (Opcional) Criar o volume de config ─────────
+# ── Passo 4: Criar o volume, semear settings.json e ajustar permissões ─
 info "Verificando volume Docker 'pi_config'..."
 if docker volume inspect pi_config &>/dev/null 2>&1; then
     success "Volume 'pi_config' já existe."
@@ -78,6 +78,31 @@ else
     docker volume create pi_config &>/dev/null
     success "Volume 'pi_config' criado."
 fi
+
+# Semeia o volume com o settings.json padrão (que declara as extensões do Pi)
+# apenas se ainda não existir. O helper roda como root (a imagem não define
+# USER) e monta o volume no mesmo caminho do agent dir (PI_CODING_AGENT_DIR).
+info "Semeando settings.json padrão no volume (se necessário)..."
+if docker run --rm \
+        -v pi_config:/tmp/.config/pi \
+        --entrypoint sh \
+        "${IMAGE_NAME}" \
+        -c '[ -f /tmp/.config/pi/settings.json ] || cp /opt/pi-defaults/settings.json /tmp/.config/pi/settings.json' &>/dev/null; then
+    success "settings.json padrão garantido no volume."
+else
+    warn "Não foi possível semear o settings.json. O Pi usará os padrões."
+fi
+
+# Garante que o usuário do host (--user UID:GID) consiga ler/escrever o volume,
+# evitando 'EACCES: permission denied' no agent dir do Pi.
+info "Ajustando permissões do volume..."
+docker run --rm \
+    -v pi_config:/tmp/.config/pi \
+    --entrypoint sh \
+    "${IMAGE_NAME}" \
+    -c 'chmod -R a+rwX /tmp/.config/pi' &>/dev/null || \
+    docker run --rm -v pi_config:/data alpine chmod -R a+rwX /data
+success "Permissões do volume ajustadas."
 
 # ── Resumo ───────────────────────────────────────────────
 echo ""
@@ -98,6 +123,8 @@ echo ""
 echo -e "  ${YELLOW}O que o alias faz:${NC}"
 echo -e "  • Abre o Pi interativamente no diretório atual"
 echo -e "  • Injeta suas chaves de API via ~/.pi-env"
-echo -e "  • Preserva config/histórico no volume pi_config"
+echo -e "  • Preserva config/histórico no volume pi_config (agent dir /tmp/.config/pi)"
+echo -e "  • Ativa as extensões do Pi via settings.json"
+echo -e "  • Python 3.12 gerenciado pelo uv (cache compartilhado com o host)"
 echo -e "  • Remove o contêiner ao sair (exit)"
 echo ""
